@@ -10,8 +10,6 @@ require('dotenv').config()
 app.use(express.json());
 app.use(cors());
 
-//db username: foodCab
-// db password: foodCab112233
 
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.xlp2yoh.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
@@ -37,8 +35,14 @@ async function run() {
         const cursor = productsCollection.find(query);
         const products = await cursor.toArray();
         res.send(products);
-        console.log(products);
-    })
+    });
+
+    app.get("/limitedProducts", async (req, res) => {
+        const query = {};
+        const cursor = productsCollection.find(query);
+        const products = await cursor.limit(3).toArray();
+        res.send(products);
+    });
    
   } finally {
   }
