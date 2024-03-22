@@ -67,6 +67,34 @@ async function run() {
       const review = await cursor.toArray();
       res.send(review);
     });
+
+    app.get("/reviews/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id)};
+      const cursor = await reviewsCollection.findOne(query);
+      res.send(cursor);
+    })
+
+    app.put("/reviews/:id", async(req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id)};
+      const reviews = req.body;
+      const options = { upsert: true};
+      const updateDoc = {
+        $set: {
+          textarea: reviews.textarea
+        }
+      }
+      const result = await reviewsCollection.updateOne(query, options, updateDoc);
+      res.send(result);
+    })
+
+    app.delete("/reviews/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id)}
+      const cursor = await reviewsCollection.deleteOne(query);
+      res.send(cursor);
+    })
   } finally {
   }
 }
