@@ -28,6 +28,8 @@ async function run() {
     const productsCollection = client.db("foodCab").collection("foodItems");
     const reviewsCollection = client.db("foodCab").collection("myReviews");
 
+    //Food Menu Items API
+
     app.get("/products", async (req, res) => {
       const query = {};
       const cursor = productsCollection.find(query);
@@ -48,6 +50,14 @@ async function run() {
       const products = await cursor.limit(3).toArray();
       res.send(products);
     });
+
+    app.post("/products", async (req, res) => {
+      const query = req.body;
+      const result = await productsCollection.insertOne(query);
+      res.send(result);
+    })
+
+
 
     //Review API Part
     app.post("/reviews", async (req, res) => {
@@ -79,13 +89,13 @@ async function run() {
       const id = req.params.id;
       const query = { _id: new ObjectId(id)};
       const reviews = req.body;
-      const options = { upsert: true};
       const updateDoc = {
         $set: {
           textarea: reviews.textarea
         }
       }
-      const result = await reviewsCollection.updateOne(query, options, updateDoc);
+      const options = { upsert: true};
+      const result = await reviewsCollection.updateOne(query, updateDoc, options);
       res.send(result);
     })
 
