@@ -1,5 +1,6 @@
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const express = require("express");
+const jwt = require("jsonwebtoken");
 const app = express();
 const cors = require("cors");
 const port = process.env.PORT || 5000;
@@ -11,7 +12,14 @@ app.use(cors());
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.xlp2yoh.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
-console.log(process.env.DB_USER, process.env.DB_PASSWORD);
+function verifyJWT(req, res, next) {
+  const authHeader = req.headers.authorization;
+
+  if (!authHeader) {
+    res.status(401).send({message: "Unauthorized Access!"});
+    
+  }
+}
 
 const client = new MongoClient(uri, {
   serverApi: {
@@ -27,6 +35,14 @@ async function run() {
 
     const productsCollection = client.db("foodCab").collection("foodItems");
     const reviewsCollection = client.db("foodCab").collection("myReviews");
+
+    app.post("/jwt", (req, res) => {
+      const user = req.body;
+      const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
+        expiresIn: "1h",
+      });
+      res.send({ token });
+    });
 
     //Food Menu Items API
 
@@ -55,9 +71,7 @@ async function run() {
       const query = req.body;
       const result = await productsCollection.insertOne(query);
       res.send(result);
-    })
-
-
+    });
 
     //Review API Part
     app.post("/reviews", async (req, res) => {
@@ -66,7 +80,7 @@ async function run() {
       res.send(review);
     });
 
-    app.get("/reviews", async (req, res) => {
+    app.get("/reviews", verifyJWT, async (req, res) => {
       let query = {};
       if (req.query.email) {
         query = {
@@ -80,31 +94,35 @@ async function run() {
 
     app.get("/reviews/:id", async (req, res) => {
       const id = req.params.id;
-      const query = { _id: new ObjectId(id)};
+      const query = { _id: new ObjectId(id) };
       const cursor = await reviewsCollection.findOne(query);
       res.send(cursor);
-    })
+    });
 
-    app.put("/reviews/:id", async(req, res) => {
+    app.put("/reviews/:id", async (req, res) => {
       const id = req.params.id;
-      const query = { _id: new ObjectId(id)};
+      const query = { _id: new ObjectId(id) };
       const reviews = req.body;
       const updateDoc = {
         $set: {
-          textarea: reviews.textarea
-        }
-      }
-      const options = { upsert: true};
-      const result = await reviewsCollection.updateOne(query, updateDoc, options);
+          textarea: reviews.textarea,
+        },
+      };
+      const options = { upsert: true };
+      const result = await reviewsCollection.updateOne(
+        query,
+        updateDoc,
+        options
+      );
       res.send(result);
-    })
+    });
 
     app.delete("/reviews/:id", async (req, res) => {
       const id = req.params.id;
-      const query = { _id: new ObjectId(id)}
+      const query = { _id: new ObjectId(id) };
       const cursor = await reviewsCollection.deleteOne(query);
       res.send(cursor);
-    })
+    });
   } finally {
   }
 }
