@@ -14,11 +14,17 @@ const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@clu
 
 function verifyJWT(req, res, next) {
   const authHeader = req.headers.authorization;
-
   if (!authHeader) {
-    res.status(401).send({message: "Unauthorized Access!"});
-    
+    return res.status(401).send({ message: "Unauthorized Access!" });
   }
+  const token = authHeader.split(" ")[1];
+  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, function (error, decoded) {
+    if (error) {
+      return res.status(401).send({ message: "Unauthorized Access" });
+    }
+    req.decoded = decoded;
+    next();
+  });
 }
 
 const client = new MongoClient(uri, {
@@ -39,7 +45,7 @@ async function run() {
     app.post("/jwt", (req, res) => {
       const user = req.body;
       const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
-        expiresIn: "1h",
+        expiresIn: "10000",
       });
       res.send({ token });
     });
