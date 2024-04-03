@@ -20,7 +20,7 @@ function verifyJWT(req, res, next) {
   const token = authHeader.split(" ")[1];
   jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, function (error, decoded) {
     if (error) {
-      return res.status(401).send({ message: "Unauthorized Access" });
+      return res.status(401).send({ message: "Forbidden Access" });
     }
     req.decoded = decoded;
     next();
@@ -45,7 +45,7 @@ async function run() {
     app.post("/jwt", (req, res) => {
       const user = req.body;
       const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
-        expiresIn: "10000",
+        expiresIn: "1h",
       });
       res.send({ token });
     });
@@ -59,6 +59,13 @@ async function run() {
       res.send(products);
     });
 
+    app.post("/products", async (req, res) => {
+      const query = req.body;
+      query.timestamp = new Date().getTime();
+      const result = await productsCollection.insertOne(query);
+      res.send(result);
+    });
+
     app.get("/products/:id", async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
@@ -68,15 +75,9 @@ async function run() {
 
     app.get("/limitedProducts", async (req, res) => {
       const query = {};
-      const cursor = productsCollection.find(query);
+      const cursor = productsCollection.find(query).sort({ timestamp: -1 });
       const products = await cursor.limit(3).toArray();
       res.send(products);
-    });
-
-    app.post("/products", async (req, res) => {
-      const query = req.body;
-      const result = await productsCollection.insertOne(query);
-      res.send(result);
     });
 
     //Review API Part
@@ -87,6 +88,12 @@ async function run() {
     });
 
     app.get("/reviews", verifyJWT, async (req, res) => {
+      const decoded = req.decoded;
+      console.log(decoded);
+      if (decoded.email !== req.query.email) {
+        return res.status(403).send({ message: "Unauthorized Access" });
+      }
+
       let query = {};
       if (req.query.email) {
         query = {
